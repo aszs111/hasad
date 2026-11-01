@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.FilterList
@@ -94,6 +96,15 @@ fun AddChannelScreen(initialLink: String, onBack: () -> Unit, onDone: (Long) -> 
     var showFilter by remember { mutableStateOf(false) }
     var keyword by remember { mutableStateOf("") }
     var fromYear by remember { mutableStateOf("") }
+    var custom by remember { mutableStateOf<Set<Long>?>(null) }   // اختيار يدوي
+    var picking by remember { mutableStateOf(false) }
+
+    fun opts(r: ScanResult) = Channel(
+        chatId = r.chatId, title = r.title, username = r.username, members = r.members, link = link.trim(),
+        kinds = kinds, byHashtag = byHashtag, byYear = byYear, renameFromCaption = rename, autoUpdate = auto,
+        keyword = keyword.trim(), fromYear = fromYear.toIntOrNull() ?: 0, storageUri = storage,
+        isProtected = false, lastMsgId = 0, blockedCount = 0, paused = false, createdAt = 0, lastSync = 0,
+    )
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
         if (uri != null) {
@@ -104,7 +115,7 @@ fun AddChannelScreen(initialLink: String, onBack: () -> Unit, onDone: (Long) -> 
 
     fun doScan() {
         if (link.isBlank() || scanning) return
-        scanning = true; error = null; result = null; found = 0
+        scanning = true; error = null; result = null; found = 0; custom = null
         scope.launch {
             try {
                 val chat = TgRepo.resolve(link)
@@ -121,6 +132,32 @@ fun AddChannelScreen(initialLink: String, onBack: () -> Unit, onDone: (Long) -> 
     }
 
     LaunchedEffect(Unit) { if (initialLink.isNotBlank()) doScan() }
+
+    // الاختيار الحالي: يدوي أو حسب النوع والفلتر
+    val res0 = result
+    val chosen: Set<Long> = remember(res0, custom, kinds, keyword, fromYear) {
+        if (res0 == null) emptySet()
+        else custom ?: opts(res0).let { o -> res0.items.filter { Library.statusFor(o, it) == com.hasad.app.data.FileStatus.PENDING }.map { it.messageId }.toSet() }
+    }
+
+    fun start(r: ScanResult, sel: Set<Long>) {
+        scope.launch {
+            val id = withContext(Dispatchers.IO) { Library.addChannel(ctx, link.trim(), r, opts(r), sel) }
+            onDone(id)
+        }
+    }
+
+    if (picking && res0 != null) {
+        val o = opts(res0)
+        FilePicker(
+            title = res0.title, items = res0.items, initial = chosen,
+            nameOf = { Library.nameFor(o, it) },
+            confirmLabel = { n, size -> s.downloadSelected(n, size) },
+            onBack = { picking = false },
+            onConfirm = { sel -> custom = sel; picking = false; if (sel.isNotEmpty()) start(res0, sel) },
+        )
+        return
+    }
 
     val fieldColors = OutlinedTextFieldDefaults.colors(focusedBorderColor = C.amber, unfocusedBorderColor = C.line, cursorColor = C.amber)
 
@@ -203,7 +240,7 @@ fun AddChannelScreen(initialLink: String, onBack: () -> Unit, onDone: (Long) -> 
             Column {
                 for (k in Kind.selectable) {
                     KindRow(s.kind(k), r.countByKind[k] ?: 0, Fmt.size(r.bytesByKind[k] ?: 0, s.ar), k in kinds) { on ->
-                        kinds = if (on) kinds + k else kinds - k
+                        kinds = if (on) kinds + k else kinds - k; custom = null
                     }
                 }
                 if (r.blocked > 0) Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -245,22 +282,27 @@ fun AddChannelScreen(initialLink: String, onBack: () -> Unit, onDone: (Long) -> 
             Spacer(Modifier.height(8.dp))
         }
 
-        val selCount = kinds.sumOf { r.countByKind[it] ?: 0 }
-        val selBytes = kinds.sumOf { r.bytesByKind[it] ?: 0L }
+        val byId = remember(r) { r.items.associateBy { it.messageId } }
+        val selCount = chosen.size
+        val selBytes = chosen.sumOf { byId[it]?.size ?: 0L }
+
+        // اختيار يدوي مع بحث وفرز
         Button(
-            onClick = {
-                val opts = Channel(
-                    chatId = r.chatId, title = r.title, username = r.username, members = r.members, link = link.trim(),
-                    kinds = kinds, byHashtag = byHashtag, byYear = byYear, renameFromCaption = rename, autoUpdate = auto,
-                    keyword = keyword.trim(), fromYear = fromYear.toIntOrNull() ?: 0, storageUri = storage,
-                    isProtected = false, lastMsgId = 0, blockedCount = 0, paused = false, createdAt = 0, lastSync = 0,
-                )
-                scope.launch {
-                    val id = withContext(Dispatchers.IO) { Library.addChannel(ctx, link.trim(), r, opts) }
-                    onDone(id)
-                }
-            },
-            enabled = kinds.isNotEmpty(), colors = ButtonDefaults.buttonColors(C.amber), shape = RoundedCornerShape(12.dp),
+            onClick = { picking = true }, colors = ButtonDefaults.buttonColors(containerColor = C.surface, contentColor = C.amber),
+            shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(48.dp)
+                .border(1.dp, C.amber.copy(alpha = 0.6f), RoundedCornerShape(12.dp)),
+        ) {
+            Icon(Icons.Filled.Checklist, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
+            Text(s.pickFiles, fontWeight = FontWeight.SemiBold)
+        }
+        if (custom != null) Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(s.customSelection(Fmt.num(custom!!.size)), color = C.amber, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            TextButton(onClick = { custom = null }) { Text(s.resetSelection, color = C.sub, fontSize = 12.sp) }
+        }
+        Spacer(Modifier.height(10.dp))
+        Button(
+            onClick = { start(r, chosen) },
+            enabled = chosen.isNotEmpty(), colors = ButtonDefaults.buttonColors(C.amber), shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth().height(52.dp),
         ) { Text(s.startN(selCount, Fmt.size(selBytes, s.ar)), fontWeight = FontWeight.Bold, fontSize = 15.sp) }
         Spacer(Modifier.height(30.dp))

@@ -26,7 +26,8 @@ object Library {
         Naming.buildName(f.origName, f.caption, f.kind, ch.renameFromCaption, "ملف_${f.messageId}")
 
     /** حفظ القناة بعد الفحص وبدء التجميع */
-    fun addChannel(ctx: Context, link: String, scan: ScanResult, opts: Channel): Long {
+    /** [selected] أرقام الرسائل اللي اختارها المستخدم بنفسه؛ لو null نختار حسب النوع والفلتر */
+    fun addChannel(ctx: Context, link: String, scan: ScanResult, opts: Channel, selected: Set<Long>? = null): Long {
         val db = Db.get(ctx)
         val ch = opts.copy(
             chatId = scan.chatId, title = scan.title, username = scan.username, members = scan.members, link = link,
@@ -34,8 +35,10 @@ object Library {
             createdAt = db.channelByChat(scan.chatId)?.createdAt ?: System.currentTimeMillis(), lastSync = System.currentTimeMillis(),
         )
         val id = db.upsertChannel(ch)
-        db.insertFiles(id, scan.chatId, scan.items, { statusFor(ch, it) }, { nameFor(ch, it) })
-        db.reapplyKinds(id, ch.kinds)
+        val chosen = selected ?: scan.items.filter { statusFor(ch, it) == FileStatus.PENDING }.map { it.messageId }.toSet()
+        db.insertFiles(id, scan.chatId, scan.items,
+            { if (it.messageId in chosen) FileStatus.PENDING else FileStatus.SKIPPED }, { nameFor(ch, it) })
+        db.applySelection(id, chosen)
         Jobs.startDownloads(ctx)
         return id
     }

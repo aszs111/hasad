@@ -141,6 +141,30 @@ class Db private constructor(ctx: Context) : SQLiteOpenHelper(ctx, "hasad.db", n
         bump()
     }
 
+    /**
+     * يطبّق اختيار المستخدم: المختار يصير بانتظار التنزيل، وغير المختار يُتخطّى.
+     * الملفات المنزّلة أو المحذوفة ما نلمسها.
+     */
+    fun applySelection(channelId: Long, selectedMsgIds: Set<Long>) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.execSQL("CREATE TEMP TABLE IF NOT EXISTS sel(m INTEGER PRIMARY KEY)")
+            db.execSQL("DELETE FROM sel")
+            val st = db.compileStatement("INSERT OR IGNORE INTO sel VALUES(?)")
+            for (m in selectedMsgIds) { st.bindLong(1, m); st.executeInsert() }
+            db.execSQL("UPDATE files SET status=${FileStatus.PENDING} WHERE channelId=? AND status=${FileStatus.SKIPPED} AND messageId IN (SELECT m FROM sel)", arrayOf(channelId))
+            db.execSQL("UPDATE files SET status=${FileStatus.SKIPPED} WHERE channelId=? AND status IN (${FileStatus.PENDING},${FileStatus.FAILED},${FileStatus.DOWNLOADING}) AND messageId NOT IN (SELECT m FROM sel)", arrayOf(channelId))
+            db.execSQL("DELETE FROM sel")
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
+        bump()
+    }
+
+    /** كل ملفات القناة (للاختيار اليدوي) */
+    fun allFiles(channelId: Long): List<FileItem> =
+        query("SELECT f.*, '' AS chTitle FROM files f WHERE channelId=? ORDER BY date DESC", arrayOf(channelId.toString()))
+
     fun nextPending(limit: Int): List<FileItem> = query(
         """SELECT f.*, c.title AS chTitle FROM files f JOIN channels c ON c.id=f.channelId
            WHERE f.status IN (${FileStatus.PENDING}, ${FileStatus.DOWNLOADING}) AND c.paused=0 AND c.protected=0

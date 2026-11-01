@@ -92,6 +92,36 @@ class S(val ar: Boolean) {
         "Hasad collects Telegram channel files, names them properly, sorts them into sections, and lets you search them like a library.")
     val syncAll = t("حدّث كل القنوات الحين", "Sync all channels now")
 
+    // اختيار الملفات
+    val pickFiles = t("اختر الملفات بنفسك (بحث وفرز)", "Pick files yourself (search & sort)")
+    val pickFilesShort = t("اختر الملفات", "Pick files")
+    fun selectedSummary(n: String, size: String, total: String) = t("مختار $n من $total · $size", "$n of $total selected · $size")
+    val pickSearchHint = t("ابحث بكلمة من الاسم أو الوصف", "Search name or caption")
+    fun shownCount(n: String) = t("الظاهر: $n", "Shown: $n")
+    val selectShown = t("اختر الظاهر", "Select shown")
+    val clearShown = t("ألغِ الظاهر", "Clear shown")
+    val onlySelected = t("المختار فقط", "Selected only")
+    val alreadyDone = t("نزل قبل", "Downloaded")
+    fun downloadSelected(n: Int, size: String) = t("نزّل المختار: $n ملف · $size", "Download selected: $n · $size")
+    fun saveSelection(n: Int, size: String) = t("اعتمد الاختيار: $n ملف · $size", "Apply: $n files · $size")
+    fun customSelection(n: String) = t("اخترت بنفسك $n ملف", "You picked $n files")
+    val resetSelection = t("رجّع الاختيار حسب النوع", "Back to type-based selection")
+    fun sortLabel(o: SortBy) = when (o) {
+        SortBy.NEWEST -> t("الأحدث", "Newest"); SortBy.OLDEST -> t("الأقدم", "Oldest")
+        SortBy.LARGEST -> t("الأكبر حجماً", "Largest"); SortBy.SMALLEST -> t("الأصغر حجماً", "Smallest")
+        SortBy.NAME -> t("بالاسم", "By name")
+    }
+    fun sizeBucket(i: Int) = when (i) {
+        0 -> t("أقل من 1 ميجا", "< 1 MB"); 1 -> t("1–10 ميجا", "1–10 MB")
+        2 -> t("10–100 ميجا", "10–100 MB"); else -> t("أكبر من 100 ميجا", "> 100 MB")
+    }
+    fun kindShort(k: Kind) = when (k) {
+        Kind.PDF -> "PDF"; Kind.WORD -> t("وورد", "Word"); Kind.EXCEL -> t("إكسل", "Excel")
+        Kind.BOOK -> t("كتب", "Books"); Kind.AUDIO -> t("صوتيات", "Audio"); Kind.VOICE -> t("بصمات", "Voice")
+        Kind.IMAGE -> t("صور", "Images"); Kind.VIDEO -> t("فيديو", "Video"); Kind.OTHER -> t("أخرى", "Other")
+        Kind.BLOCKED -> t("برامج", "Programs")
+    }
+
     fun kind(k: Kind) = when (k) {
         Kind.PDF -> t("ملفات PDF", "PDF files")
         Kind.WORD -> t("ملفات وورد", "Word files")

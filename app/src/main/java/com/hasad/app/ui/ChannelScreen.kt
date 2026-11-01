@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Info
@@ -79,6 +80,29 @@ fun ChannelScreen(id: Long, onBack: () -> Unit) {
     val c = ch ?: return
     val db = Db.get(ctx)
 
+    var picking by remember { mutableStateOf(false) }
+    if (picking) {
+        val all by dbState<List<FileItem>?>(null, id, "all") { it.allFiles(id) }
+        val list = all ?: return
+        val items = remember(list) { list.map {
+            com.hasad.app.data.ScannedFile(it.messageId, it.kind, it.origName, it.caption, it.section, it.year, it.date, it.size, it.mime)
+        } }
+        val names = remember(list) { list.associate { it.messageId to it.displayName } }
+        val done = remember(list) { list.filter { it.status == FileStatus.DONE }.map { it.messageId }.toSet() }
+        val initial = remember(list) { list.filter { it.status != FileStatus.SKIPPED && it.status != FileStatus.REMOVED }.map { it.messageId }.toSet() }
+        FilePicker(
+            title = c.title, items = items, initial = initial, done = done,
+            nameOf = { names[it.messageId] ?: it.origName },
+            confirmLabel = { n, size -> s.saveSelection(n, size) },
+            onBack = { picking = false },
+            onConfirm = { sel ->
+                picking = false
+                scope.launch(Dispatchers.IO) { db.applySelection(id, sel); Jobs.startDownloads(ctx) }
+            },
+        )
+        return
+    }
+
     LazyColumn(Modifier.fillMaxSize(), state = rememberLazyListState()) {
         item {
             Row(Modifier.padding(top = 6.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -126,6 +150,7 @@ fun ChannelScreen(id: Long, onBack: () -> Unit) {
                             }
                         }
                     }
+                    Pill(s.pickFilesShort, icon = Icons.Filled.Checklist) { picking = true }
                     Pill(s.edit, icon = Icons.Filled.Tune) { editKinds = true }
                     Pill(s.delete, icon = Icons.Filled.Delete) { confirmDelete = true }
                 }
