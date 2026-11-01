@@ -1,0 +1,11 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+/out/
+/tgx-tdlib/
+# تُنسخ وقت البناء من TGX-Android/tdlib
+app/src/main/java/org/drinkless/
+app/src/main/jniLibs/

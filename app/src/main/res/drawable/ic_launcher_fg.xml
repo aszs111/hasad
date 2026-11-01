@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- شعار: رفّ كتب كهرماني (كتب بأطوال مختلفة فوق خط الرف) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFF0A23B" android:pathData="M34,40h7v32h-7z" />
+    <path android:fillColor="#FFE08E2A" android:pathData="M43,34h7v38h-7z" />
+    <path android:fillColor="#FFF4B860" android:pathData="M52,44h6v28h-6z" />
+    <path android:fillColor="#FFF0A23B" android:pathData="M60,37h7v35h-7z" />
+    <path android:fillColor="#FFE08E2A" android:pathData="M69,42h5v30h-5z" />
+    <path android:fillColor="#FF8C7AA8" android:pathData="M30,73h48v3h-48z" />
+</vector>
