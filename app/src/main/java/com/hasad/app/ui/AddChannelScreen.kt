@@ -172,7 +172,7 @@ fun AddChannelScreen(initialLink: String, onBack: () -> Unit, onDone: (Long) -> 
             OutlinedTextField(
                 link, { link = it }, modifier = Modifier.weight(1f), singleLine = true, colors = fieldColors,
                 placeholder = { Text("https://t.me/…", color = C.dim) },
-                textStyle = androidx.compose.ui.text.TextStyle(textDirection = TextDirection.Ltr, color = C.text, fontSize = 14.sp),
+                textStyle = androidx.compose.ui.text.TextStyle(fontFamily = Markazi, textDirection = TextDirection.Ltr, color = C.text, fontSize = 14.sp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { doScan() }),
                 trailingIcon = {

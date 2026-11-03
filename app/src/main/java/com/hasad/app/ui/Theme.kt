@@ -21,6 +21,34 @@ object C {
     val red = Color(0xFFE0736A)
 }
 
+/** خط «مركزي» (Markazi Text) — رخصة SIL OFL — لجميع نصوص التطبيق. */
+val Markazi = androidx.compose.ui.text.font.FontFamily(
+    androidx.compose.ui.text.font.Font(com.hasad.app.R.font.markazi_regular, androidx.compose.ui.text.font.FontWeight.Normal),
+    androidx.compose.ui.text.font.Font(com.hasad.app.R.font.markazi_medium, androidx.compose.ui.text.font.FontWeight.Medium),
+    androidx.compose.ui.text.font.Font(com.hasad.app.R.font.markazi_semibold, androidx.compose.ui.text.font.FontWeight.SemiBold),
+    androidx.compose.ui.text.font.Font(com.hasad.app.R.font.markazi_bold, androidx.compose.ui.text.font.FontWeight.Bold),
+)
+
+private fun androidx.compose.material3.Typography.withFamily(f: androidx.compose.ui.text.font.FontFamily) = androidx.compose.material3.Typography(
+    displayLarge = displayLarge.copy(fontFamily = f), displayMedium = displayMedium.copy(fontFamily = f), displaySmall = displaySmall.copy(fontFamily = f),
+    headlineLarge = headlineLarge.copy(fontFamily = f), headlineMedium = headlineMedium.copy(fontFamily = f), headlineSmall = headlineSmall.copy(fontFamily = f),
+    titleLarge = titleLarge.copy(fontFamily = f), titleMedium = titleMedium.copy(fontFamily = f), titleSmall = titleSmall.copy(fontFamily = f),
+    bodyLarge = bodyLarge.copy(fontFamily = f), bodyMedium = bodyMedium.copy(fontFamily = f), bodySmall = bodySmall.copy(fontFamily = f),
+    labelLarge = labelLarge.copy(fontFamily = f), labelMedium = labelMedium.copy(fontFamily = f), labelSmall = labelSmall.copy(fontFamily = f),
+)
+
+private val AppTypography = androidx.compose.material3.Typography().withFamily(Markazi)
+
+/** حروف «مركزي» أصغر من غيرها بالحجم نفسه، فنكبّرها قليلًا. */
+@Composable
+private fun MarkaziScale(content: @Composable () -> Unit) {
+    val d = androidx.compose.ui.platform.LocalDensity.current
+    androidx.compose.runtime.CompositionLocalProvider(
+        androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density, d.fontScale * 1.15f),
+        content = content,
+    )
+}
+
 @Composable
 fun HasadTheme(content: @Composable () -> Unit) {
     MaterialTheme(
@@ -31,6 +59,6 @@ fun HasadTheme(content: @Composable () -> Unit) {
             outline = C.line, error = C.red,
             surfaceContainer = C.surface, surfaceContainerHigh = C.card, surfaceContainerHighest = C.card,
         ),
-        content = content,
-    )
+        typography = AppTypography,
+    ) { MarkaziScale(content) }
 }
